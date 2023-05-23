@@ -10,77 +10,137 @@ namespace ShoppingApi.Controllers
     public class DeliveriesController : ControllerBase
     {
         private readonly IGenericRepository<Deliveries> _repository;
+        private readonly IGenericRepository<UserAccounts> _userAccountRepository;
 
-        public DeliveriesController(IGenericRepository<Deliveries> repository)
+        public DeliveriesController(IGenericRepository<Deliveries> repository, IGenericRepository<UserAccounts> userAccountRepository)
         {
             _repository = repository;
+            _userAccountRepository = userAccountRepository;
         }
 
         /// <summary>
-        /// Get delivery by ID.
+        /// Get all deliveries
         /// </summary>
-        /// <param name="id">ID of the delivery.</param>
-        /// <returns>The delivery.</returns>
-        [HttpGet("{id}")]
-        [ProducesResponseType(typeof(DeliveriesModel), 200)]
-        public async Task<IActionResult> Get(int id)
+        /// <returns>List of deliveries</returns>
+        [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<DeliveriesModel>), 200)]
+        public async Task<IActionResult> GetAllDeliveries()
         {
-            var data = await _repository.GetByIdAsync(id);
-            if (data == null)
+            var deliveries = await _repository.GetAllAsync();
+            var deliveryModels = deliveries.Select(delivery => new DeliveriesModel
+            {
+                UserId = delivery.UserId,
+                Date = delivery.Date
+            });
+
+            return Ok(deliveryModels);
+        }
+
+        /// <summary>
+        /// Get delivery by ID
+        /// </summary>
+        /// <param name="id">Delivery ID</param>
+        /// <returns>Delivery</returns>
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(DeliveriesModel), 200)]
+        public async Task<IActionResult> GetDelivery(int id)
+        {
+            var delivery = await _repository.GetByIdAsync(id);
+            if (delivery == null)
             {
                 return NotFound();
             }
 
-            // Map the entity to the view model
             var deliveryModel = new DeliveriesModel
             {
-                Id = data.Id,
-                UserId = data.UserId,
-                Date = data.Date
+                UserId = delivery.UserId,
+                Date = delivery.Date
             };
 
             return Ok(deliveryModel);
         }
 
         /// <summary>
-        /// Add a new delivery.
+        /// Add new delivery
         /// </summary>
-        /// <param name="deliveryModel">The delivery model.</param>
-        /// <returns>The created delivery.</returns>
+        /// <param name="delivery">Delivery object</param>
+        /// <returns>Created delivery</returns>
         [HttpPost]
-        public async Task<IActionResult> AddDelivery(DeliveriesModel deliveryModel)
+        [ProducesResponseType(typeof(DeliveriesModel), 201)]
+        public async Task<IActionResult> AddDelivery(DeliveriesModel delivery)
         {
-            var delivery = new Deliveries
+            var user = await _userAccountRepository.GetByIdAsync(delivery.UserId);
+            if (user == null)
             {
-                UserId = deliveryModel.UserId,
-                Date = deliveryModel.Date
-            };
+                return BadRequest("User not found");
+            }
 
-            await _repository.AddAsync(delivery);
-            await _repository.SaveAsync();
-
-            // Map the entity to the view model
-            var createdDeliveryModel = new DeliveriesModel
+            var newDelivery = new Deliveries
             {
-                Id = delivery.Id,
                 UserId = delivery.UserId,
                 Date = delivery.Date
             };
 
-            return Created($"api/deliveries/{delivery.Id}", createdDeliveryModel);
+            await _repository.AddAsync(newDelivery);
+            await _repository.SaveAsync();
+
+            /*var deliveryModel = new DeliveriesModel
+            {
+                UserId = newDelivery.UserId,
+                Date = newDelivery.Date
+            };
+
+            return Created($"api/deliveries/{newDelivery.Id}", newDelivery);*/
+            return Ok("delivery added");
         }
 
         /// <summary>
-        /// Delete a delivery by ID.
+        /// Update delivery by ID
         /// </summary>
-        /// <param name="id">ID of the delivery to delete.</param>
-        /// <returns>OK if deletion is successful.</returns>
-        [HttpDelete("{id}")]
+        /// <param name="id">Delivery ID</param>
+        /// <param name="delivery">Updated delivery object</param>
+        /// <returns>Updated delivery</returns>
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(typeof(DeliveriesModel), 200)]
+        public async Task<IActionResult> UpdateDelivery(int id, DeliveriesModel delivery)
+        {
+            var existingDelivery = await _repository.GetByIdAsync(id);
+            if (existingDelivery == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userAccountRepository.GetByIdAsync(delivery.UserId);
+            if (user == null)
+            {
+                return BadRequest("User not found");
+            }
+
+            existingDelivery.UserId = delivery.UserId;
+            existingDelivery.Date = delivery.Date;
+
+            _repository.Update(existingDelivery);
+            await _repository.SaveAsync();
+
+            var updatedDeliveryModel = new DeliveriesModel
+            {
+                UserId = existingDelivery.UserId,
+                Date = existingDelivery.Date
+            };
+
+            return Ok(updatedDeliveryModel);
+        }
+
+        /// <summary>
+        /// Delete delivery by ID
+        /// </summary>
+        /// <param name="id">Delivery ID</param>
+        /// <returns>NoContent</returns>
+        [HttpDelete]
         public async Task<IActionResult> Delete(int id)
         {
             _repository.Delete(id);
             await _repository.SaveAsync();
-
             return Ok();
         }
     }

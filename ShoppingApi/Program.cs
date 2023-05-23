@@ -20,7 +20,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<ShoppingDBContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("ShoppingDB"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ShoppingDatabase"));
 });
 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));

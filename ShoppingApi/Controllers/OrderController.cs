@@ -1,125 +1,232 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ShoppingApi.Models;
 using ShoppingApi.Repository;
 using ShoppingApi.ViewModel;
-using System.Linq.Expressions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ShoppingApi.Controllers
 {
     [ApiController]
-    [Route("api/order")]
-    public class OrderController : ControllerBase
+    [Route("api/orders")]
+    public class OrdersController : ControllerBase
     {
         private readonly IGenericRepository<Order> _repository;
-        public OrderController(IGenericRepository<Order> repository)
+        private readonly IGenericRepository<UserAccounts> _userAccountRepository;
+        private readonly IGenericRepository<Cart> _cartRepository;
+
+        public OrdersController(
+            IGenericRepository<Order> repository,
+            IGenericRepository<UserAccounts> userAccountRepository,
+            IGenericRepository<Cart> cartRepository)
         {
             _repository = repository;
+            _userAccountRepository = userAccountRepository;
+            _cartRepository = cartRepository;
         }
 
         /// <summary>
-        /// Get orders for a specific user based on date submitted and user ID.
+        /// Get all orders.
         /// </summary>
-        /// <param name="userId">user ID</param>
-        /// <param name="date">date submitted</param>
-        /// <returns>List of orders matching the criteria</returns>
-        [HttpGet("filter")]
-        [ProducesResponseType(typeof(List<OrderModel>), 200)]
-        public async Task<IActionResult> GetFilteredOrders(int userId, DateTime date)
-        {
-            // Filter orders based on user ID and date submitted
-            Expression<Func<Order, bool>> expression = o => o.UserId == userId && o.Date.Date == date.Date;
-            var filteredOrders = await _repository.GetAllAsync(expression);
-
-            // Map the filtered orders to the OrderModel
-            var orderModels = filteredOrders.Select(o => new OrderModel
-            {
-                UserId = o.UserId,
-                CartId = o.CartId,
-                Date = o.Date
-            }).ToList();
-
-            return Ok(orderModels);
-        }
-
-        /// <summary>
-        /// Get the current day's order list by user.
-        /// </summary>
-        /// <param name="userId">user ID.</param>
-        /// <returns>List of orders for the current day by the specified user.</returns>
-        [HttpGet("current-day")]
-        [ProducesResponseType(typeof(List<OrderModel>), 200)]
-        public async Task<IActionResult> GetCurrentDayOrdersByUser(int userId)
-        {
-            // Get the current date
-            DateTime currentDate = DateTime.UtcNow.Date;
-
-            // Filter orders for the current day by user ID
-            Expression<Func<Order, bool>> expression = o => o.UserId == userId && o.Date.Date == currentDate;
-            var filteredOrders = await _repository.GetAllAsync(expression);
-
-            // Map the filtered orders to the OrderModel
-            var orderModels = filteredOrders.Select(o => new OrderModel
-            {
-                UserId = o.UserId,
-                CartId = o.CartId,
-                Date = o.Date
-            }).ToList();
-
-            return Ok(orderModels);
-        }
-
-        /// <summary>
-        /// get order
-        /// </summary>
-        /// <returns></returns>
+        /// <returns>List of orders</returns>
         [HttpGet]
-        [ProducesResponseType(typeof(OrderModel), 200)]
-        public async Task<IActionResult> Get(int id)
+        [ProducesResponseType(typeof(List<OrderModel>), 200)]
+        public async Task<IActionResult> GetAllOrders()
         {
-            var data = await _repository.GetByIdAsync(id);
-            if (data == null)
+            var orders = await _repository.GetAllAsync();
+
+            var orderModels = orders.Select(order => new OrderModel
+            {
+                UserId = order.UserId,
+                CartId = order.CartId,
+                Date = order.Date
+            }).ToList();
+
+            return Ok(orderModels);
+        }
+
+        /// <summary>
+        /// Get order by ID.
+        /// </summary>
+        /// <param name="id">Order ID</param>
+        /// <returns>Order</returns>
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(OrderModel), 200)]
+        public async Task<IActionResult> GetOrder(int id)
+        {
+            var order = await _repository.GetByIdAsync(id);
+            if (order == null)
             {
                 return NotFound();
             }
-            return Ok(new OrderModel
-            {
-                UserId = data.UserId,
-                CartId = data.CartId,
-                Date = data.Date
-            });
-        }
 
-        /// <summary>
-        /// add new order
-        /// </summary>
-        /// <returns></returns>
-        [HttpPost]
-        public async Task<IActionResult> AddOrder(OrderModel orderModel)
-        {
-            Order o = new Order
+            var orderModel = new OrderModel
             {
-                UserId = orderModel.UserId,
-                CartId = orderModel.CartId,
-                Date = orderModel.Date
+                UserId = order.UserId,
+                CartId = order.CartId,
+                Date = order.Date
             };
 
-            await _repository.AddAsync(o);
-            await _repository.SaveAsync();
-
-            return Created($"api/products/{o.Id}", o);
+            return Ok(orderModel);
         }
 
         /// <summary>
-        /// delete order
+        /// Get orders for a specific user based on the passed date.
         /// </summary>
-        /// <returns></returns>
-        [HttpDelete]
-        public async Task<IActionResult> Delete(int id)
+        /// <param name="userId">User ID</param>
+        /// <param name="date">Filter date</param>
+        /// <returns>List of filtered orders</returns>
+        [HttpGet("user/{userId:int}")]
+        [ProducesResponseType(typeof(List<OrderModel>), 200)]
+        public async Task<IActionResult> GetOrdersForUser(int userId, [FromQuery] DateTime date)
+        {
+            var user = await _userAccountRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return BadRequest("User not found");
+            }
+
+            var orders = await _repository.GetAllAsync();
+
+            var filteredOrders = orders.Where(order => order.UserId == userId && order.Date.Date == date.Date);
+
+            var orderModels = filteredOrders.Select(order => new OrderModel
+            {
+                UserId = order.UserId,
+                CartId = order.CartId,
+                Date = order.Date
+            }).ToList();
+
+            return Ok(orderModels);
+        }
+
+        /// <summary>
+        /// Create a new order.
+        /// </summary>
+        /// <param name="order">Order object</param>
+        /// <returns>Created order</returns>
+        [HttpPost]
+        [ProducesResponseType(typeof(OrderModel), 201)]
+        public async Task<IActionResult> AddOrder(OrderModel order)
+        {
+            try
+            {
+                var user = await _userAccountRepository.GetByIdAsync(order.UserId);
+                var cart = await _cartRepository.GetByIdAsync(order.CartId);
+
+                if (user == null || cart == null)
+                {
+                    return BadRequest("User or Cart not found");
+                }
+
+                var newOrder = new Order
+                {
+                    UserId = order.UserId,
+                    CartId = order.CartId,
+                    Date = order.Date
+                };
+
+                await _repository.AddAsync(newOrder);
+                await _repository.SaveAsync();
+
+                var orderModel = new OrderModel
+                {
+                    UserId = newOrder.UserId,
+                    CartId = newOrder.CartId,
+                    Date = newOrder.Date
+                };
+
+                return Created($"api/orders/{newOrder.UserId}", orderModel);
+            }
+            catch (DbUpdateException)
+            {
+                return BadRequest("Failed to create order. Duplicate CartId detected. Please add new Cart");
+            }
+        }
+
+        /// <summary>
+        /// Update an existing order.
+        /// </summary>
+        /// <param name="id">Order ID</param>
+        /// <param name="order">Updated order object</param>
+        /// <returns>Updated order</returns>
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(typeof(OrderModel), 200)]
+        public async Task<IActionResult> UpdateOrder(int id, OrderModel order)
+        {
+            var existingOrder = await _repository.GetByIdAsync(id);
+            if (existingOrder == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userAccountRepository.GetByIdAsync(order.UserId);
+            var cart = await _cartRepository.GetByIdAsync(order.CartId);
+
+            if (user == null || cart == null)
+            {
+                return BadRequest("User or Cart not found");
+            }
+
+            existingOrder.UserId = order.UserId;
+            existingOrder.CartId = order.CartId;
+            existingOrder.Date = order.Date;
+
+            _repository.Update(existingOrder);
+            await _repository.SaveAsync();
+
+            var updatedOrderModel = new OrderModel
+            {
+                UserId = existingOrder.UserId,
+                CartId = existingOrder.CartId,
+                Date = existingOrder.Date
+            };
+
+            return Ok(updatedOrderModel);
+        }
+
+        /// <summary>
+        /// Get the list of orders for the current day based on the provided user ID.
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <returns>List of orders for the current day</returns>
+        [HttpGet("user/{userId:int}/current-day")]
+        [ProducesResponseType(typeof(List<OrderModel>), 200)]
+        public async Task<IActionResult> GetCurrentDayOrdersByUser(int userId)
+        {
+            var user = await _userAccountRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+            var currentDate = DateTime.Now.Date;
+            var orders = await _repository.GetAllAsync(o => o.UserId == userId && o.Date.Date == currentDate);
+
+            var orderModels = orders.Select(order => new OrderModel
+            {
+                UserId = order.UserId,
+                CartId = order.CartId,
+                Date = order.Date
+            }).ToList();
+
+            return Ok(orderModels);
+        }
+
+        /// <summary>
+        /// Delete an order by ID.
+        /// </summary>
+        /// <param name="id">Order ID</param>
+        /// <returns>NoContent</returns>
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteOrder(int id)
         {
             _repository.Delete(id);
             await _repository.SaveAsync();
-
-            return Ok();
+            return NoContent();
         }
     }
 }

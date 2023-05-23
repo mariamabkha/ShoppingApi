@@ -36,14 +36,10 @@ namespace ShoppingApi.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("IsFilled")
-                        .HasMaxLength(11)
                         .HasColumnType("bit");
 
                     b.Property<int>("ProductId")
                         .HasMaxLength(11)
-                        .HasColumnType("int");
-
-                    b.Property<int?>("UserAccountId")
                         .HasColumnType("int");
 
                     b.Property<int>("UserId")
@@ -52,7 +48,9 @@ namespace ShoppingApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserAccountId");
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Carts", (string)null);
                 });
@@ -66,14 +64,14 @@ namespace ShoppingApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("CategoryName")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -130,7 +128,7 @@ namespace ShoppingApi.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Order", (string)null);
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.Payment", b =>
@@ -163,9 +161,11 @@ namespace ShoppingApi.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ProductId");
+
                     b.HasIndex("UserId");
 
-                    b.ToTable("Payment", (string)null);
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.Products", b =>
@@ -177,9 +177,6 @@ namespace ShoppingApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CartId")
-                        .HasColumnType("int");
-
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
@@ -187,6 +184,7 @@ namespace ShoppingApi.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -200,8 +198,6 @@ namespace ShoppingApi.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CartId");
 
                     b.HasIndex("CategoryId");
 
@@ -230,17 +226,14 @@ namespace ShoppingApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("UserAccountId")
-                        .HasColumnType("int");
-
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserAccountId");
+                    b.HasIndex("UserId");
 
-                    b.ToTable("Transaction", (string)null);
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.UserAccounts", b =>
@@ -259,8 +252,9 @@ namespace ShoppingApi.Migrations
                     b.Property<int>("Age")
                         .HasColumnType("int");
 
-                    b.Property<int>("ContactNumber")
-                        .HasColumnType("int");
+                    b.Property<string>("ContactNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Gender")
                         .IsRequired()
@@ -277,18 +271,15 @@ namespace ShoppingApi.Migrations
                     b.Property<int>("TypeId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserTypesId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserTypesId");
+                    b.HasIndex("TypeId");
 
-                    b.ToTable("UserAcounts", (string)null);
+                    b.ToTable("UserAccounts", (string)null);
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.UserTypes", b =>
@@ -315,9 +306,19 @@ namespace ShoppingApi.Migrations
 
             modelBuilder.Entity("ShoppingApi.Models.Cart", b =>
                 {
+                    b.HasOne("ShoppingApi.Models.Products", "Product")
+                        .WithMany("Carts")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("ShoppingApi.Models.UserAccounts", "UserAccount")
-                        .WithMany()
-                        .HasForeignKey("UserAccountId");
+                        .WithMany("Carts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
 
                     b.Navigation("UserAccount");
                 });
@@ -327,7 +328,7 @@ namespace ShoppingApi.Migrations
                     b.HasOne("ShoppingApi.Models.UserAccounts", "UserAccount")
                         .WithMany("Deliveries")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("UserAccount");
@@ -344,7 +345,7 @@ namespace ShoppingApi.Migrations
                     b.HasOne("ShoppingApi.Models.UserAccounts", "UserAccount")
                         .WithMany("Orders")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Cart");
@@ -354,21 +355,25 @@ namespace ShoppingApi.Migrations
 
             modelBuilder.Entity("ShoppingApi.Models.Payment", b =>
                 {
+                    b.HasOne("ShoppingApi.Models.Products", "Product")
+                        .WithMany("Payments")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("ShoppingApi.Models.UserAccounts", "UserAccount")
                         .WithMany("Payments")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Product");
 
                     b.Navigation("UserAccount");
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.Products", b =>
                 {
-                    b.HasOne("ShoppingApi.Models.Cart", null)
-                        .WithMany("Product")
-                        .HasForeignKey("CartId");
-
                     b.HasOne("ShoppingApi.Models.Categories", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
@@ -378,7 +383,7 @@ namespace ShoppingApi.Migrations
                     b.HasOne("ShoppingApi.Models.UserAccounts", "UserAccount")
                         .WithMany("Products")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Category");
@@ -389,28 +394,29 @@ namespace ShoppingApi.Migrations
             modelBuilder.Entity("ShoppingApi.Models.Transaction", b =>
                 {
                     b.HasOne("ShoppingApi.Models.UserAccounts", "UserAccount")
-                        .WithMany()
-                        .HasForeignKey("UserAccountId");
+                        .WithMany("Transactions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("UserAccount");
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.UserAccounts", b =>
                 {
-                    b.HasOne("ShoppingApi.Models.UserTypes", "UserTypes")
-                        .WithMany()
-                        .HasForeignKey("UserTypesId")
+                    b.HasOne("ShoppingApi.Models.UserTypes", "UserType")
+                        .WithMany("UserAccounts")
+                        .HasForeignKey("TypeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("UserTypes");
+                    b.Navigation("UserType");
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.Cart", b =>
                 {
-                    b.Navigation("Order");
-
-                    b.Navigation("Product");
+                    b.Navigation("Order")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ShoppingApi.Models.Categories", b =>
@@ -418,8 +424,17 @@ namespace ShoppingApi.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("ShoppingApi.Models.Products", b =>
+                {
+                    b.Navigation("Carts");
+
+                    b.Navigation("Payments");
+                });
+
             modelBuilder.Entity("ShoppingApi.Models.UserAccounts", b =>
                 {
+                    b.Navigation("Carts");
+
                     b.Navigation("Deliveries");
 
                     b.Navigation("Orders");
@@ -427,6 +442,13 @@ namespace ShoppingApi.Migrations
                     b.Navigation("Payments");
 
                     b.Navigation("Products");
+
+                    b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("ShoppingApi.Models.UserTypes", b =>
+                {
+                    b.Navigation("UserAccounts");
                 });
 #pragma warning restore 612, 618
         }

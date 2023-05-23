@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using ShoppingApi.Models;
 using ShoppingApi.Repository;
 using ShoppingApi.ViewModel;
-using ShoppingApi.Models;
-
 
 namespace ShoppingApi.Controllers
 {
@@ -11,70 +14,150 @@ namespace ShoppingApi.Controllers
     public class TransactionController : ControllerBase
     {
         private readonly IGenericRepository<Transaction> _repository;
+        private readonly IGenericRepository<UserAccounts> _userAccountRepository;
 
-        public TransactionController(IGenericRepository<Transaction> repository)
+        public TransactionController(IGenericRepository<Transaction> repository, IGenericRepository<UserAccounts> userAccountRepository)
         {
             _repository = repository;
+            _userAccountRepository = userAccountRepository;
+        }
+
+        /// <summary>
+        /// Get all transactions
+        /// </summary>
+        /// <returns>List of transactions</returns>
+        [HttpGet]
+        [ProducesResponseType(typeof(List<TransactionModel>), 200)]
+        public async Task<IActionResult> GetAllTransactions()
+        {
+            var transactions = await _repository.GetAllAsync();
+
+            var transactionModels = transactions.Select(transaction => new TransactionModel
+            {
+                TransactionType = transaction.TransactionType,
+                Description = transaction.Description,
+                UserId = transaction.UserId,
+                Date = transaction.Date
+            }).ToList();
+
+            return Ok(transactionModels);
         }
 
         /// <summary>
         /// Get transaction by ID
         /// </summary>
         /// <param name="id">Transaction ID</param>
-        /// <returns>Transaction details</returns>
-        [HttpGet("{id}")]
+        /// <returns>Transaction</returns>
+        [HttpGet("{id:int}")]
         [ProducesResponseType(typeof(TransactionModel), 200)]
-        public async Task<IActionResult> Get(int id)
+        public async Task<IActionResult> GetTransaction(int id)
         {
-            var data = await _repository.GetByIdAsync(id);
-            if (data == null)
+            var transaction = await _repository.GetByIdAsync(id);
+            if (transaction == null)
             {
                 return NotFound();
             }
+
             var transactionModel = new TransactionModel
             {
-                Id = data.Id,
-                TransactionType = data.TransactionType,
-                Description = data.Description,
-                UserId = data.UserId,
-                Date = data.Date
+                TransactionType = transaction.TransactionType,
+                Description = transaction.Description,
+                UserId = transaction.UserId,
+                Date = transaction.Date
             };
+
             return Ok(transactionModel);
         }
 
         /// <summary>
         /// Add new transaction
         /// </summary>
-        /// <param name="transactionModel">Transaction details</param>
+        /// <param name="transaction">Transaction object</param>
         /// <returns>Created transaction</returns>
         [HttpPost]
-        public async Task<IActionResult> AddTransaction(TransactionModel transactionModel)
+        [ProducesResponseType(typeof(TransactionModel), 201)]
+        public async Task<IActionResult> AddTransaction(TransactionModel transaction)
         {
-            var transaction = new Transaction
+            var user = await _userAccountRepository.GetByIdAsync(transaction.UserId);
+            if (user == null)
             {
-                TransactionType = transactionModel.TransactionType,
-                Description = transactionModel.Description,
-                UserId = transactionModel.UserId,
-                Date = transactionModel.Date
+                return BadRequest("User not found");
+            }
+
+            var newTransaction = new Transaction
+            {
+                TransactionType = transaction.TransactionType,
+                Description = transaction.Description,
+                UserId = transaction.UserId,
+                Date = transaction.Date
             };
 
-            await _repository.AddAsync(transaction);
+            await _repository.AddAsync(newTransaction);
             await _repository.SaveAsync();
 
-            return Created($"api/transactions/{transaction.Id}", transaction);
+            var transactionModel = new TransactionModel
+            {
+                TransactionType = newTransaction.TransactionType,
+                Description = newTransaction.Description,
+                UserId = newTransaction.UserId,
+                Date = newTransaction.Date
+            };
+
+            return Created($"api/transactions/{newTransaction.Id}", transactionModel);
+        }
+
+        /// <summary>
+        /// Update transaction by ID
+        /// </summary>
+        /// <param name="id">Transaction ID</param>
+        /// <param name="transaction">Updated transaction object</param>
+        /// <returns>Updated transaction</returns>
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(typeof(TransactionModel), 200)]
+        public async Task<IActionResult> UpdateTransaction(int id, TransactionModel transaction)
+        {
+            var existingTransaction = await _repository.GetByIdAsync(id);
+            if (existingTransaction == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userAccountRepository.GetByIdAsync(transaction.UserId);
+            if (user == null)
+            {
+                return BadRequest("User not found");
+            }
+
+            existingTransaction.TransactionType = transaction.TransactionType;
+            existingTransaction.Description = transaction.Description;
+            existingTransaction.UserId = transaction.UserId;
+            existingTransaction.Date = transaction.Date;
+
+            _repository.Update(existingTransaction);
+            await _repository.SaveAsync();
+
+            var updatedTransactionModel = new TransactionModel
+            {
+                TransactionType = existingTransaction.TransactionType,
+                Description = existingTransaction.Description,
+                UserId = existingTransaction.UserId,
+                Date = existingTransaction.Date
+            };
+
+            return Ok(updatedTransactionModel);
         }
 
         /// <summary>
         /// Delete transaction by ID
         /// </summary>
         /// <param name="id">Transaction ID</param>
-        /// <returns>Ok if successful</returns>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        /// <returns>NoContent</returns>
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteTransaction(int id)
         {
             _repository.Delete(id);
             await _repository.SaveAsync();
-            return Ok();
+            return NoContent();
         }
     }
 }

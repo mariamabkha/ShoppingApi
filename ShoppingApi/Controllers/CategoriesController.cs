@@ -16,11 +16,34 @@ namespace ShoppingApi.Controllers
         }
 
         /// <summary>
+        /// Get all categories
+        /// </summary>
+        /// <returns>List of categories</returns>
+        [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<CategoriesModel>), 200)]
+        public async Task<IActionResult> GetAllCategories()
+        {
+            var categories = await _repository.GetAllAsync();
+            var categoryModels = new List<CategoriesModel>();
+
+            foreach (var category in categories)
+            {
+                categoryModels.Add(new CategoriesModel
+                {
+                    CategoryName = category.CategoryName,
+                    Description = category.Description
+                });
+            }
+
+            return Ok(categoryModels);
+        }
+
+        /// <summary>
         /// get category
         /// </summary>
         /// <param name="id"> id number of category</param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("{id:int}")]
         [ProducesResponseType(typeof(CategoriesModel), 200)]
         public async Task<IActionResult> Get(int id)
         {
@@ -29,7 +52,7 @@ namespace ShoppingApi.Controllers
             {
                 return NotFound();
             }
-            return Ok(new CategoriesModel { Name = data.Name, Description = data.Description });
+            return Ok(new CategoriesModel { CategoryName = data.CategoryName, Description = data.Description });
         }
 
         /// <summary>
@@ -42,7 +65,7 @@ namespace ShoppingApi.Controllers
         {
             Categories c = new Categories
             {
-                Name = categories.Name,
+                CategoryName = categories.CategoryName,
                 Description = categories.Description
             };
 

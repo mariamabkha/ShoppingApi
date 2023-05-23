@@ -12,5 +12,7 @@ namespace ShoppingApi.Repository
         void Update(T obj);
         void Delete(int id);
         Task SaveAsync();
+        Task<T> GetFirstOrDefaultAsync(Expression<Func<T, bool>> expression = null,
+            Expression<Func<T, object>>[] includes = null);
     }
 }

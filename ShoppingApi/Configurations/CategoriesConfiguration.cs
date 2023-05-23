@@ -9,8 +9,10 @@ namespace ShoppingApi.Configurations
         public void Configure(EntityTypeBuilder<Categories> builder)
         {
             builder.ToTable("Categories");
+            builder.HasKey(c => c.Id);
+
             builder.Property(c => c.Id).HasMaxLength(11).IsRequired();
-            builder.Property(c => c.Name).HasMaxLength(255);
+            builder.Property(c => c.CategoryName).HasMaxLength(255);
 
             builder.HasMany(c => c.Products)
             .WithOne(p => p.Category)

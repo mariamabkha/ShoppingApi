@@ -9,12 +9,15 @@ namespace ShoppingApi.Configurations
         public void Configure(EntityTypeBuilder<Deliveries> builder)
         {
             builder.ToTable("Deliveries");
+            builder.HasKey(d => d.Id);
+
             builder.Property(d => d.Id).HasMaxLength(11);
             builder.Property(d => d.UserId).HasMaxLength(11);
 
-/*            builder.HasOne(d => d.UserAccount)
-           .WithMany(u => u.Deliveries)
-           .HasForeignKey(d => d.UserId);*/
+           /* builder.HasOne(d => d.UserAccount)
+            .WithMany(u => u.Deliveries)
+            .HasForeignKey(d => d.UserId);*/
+
         }
     }
 }

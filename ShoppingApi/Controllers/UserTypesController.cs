@@ -2,6 +2,8 @@
 using ShoppingApi.Models;
 using ShoppingApi.Repository;
 using ShoppingApi.ViewModel;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ShoppingApi.Controllers
 {
@@ -10,55 +12,83 @@ namespace ShoppingApi.Controllers
     public class UserTypesController : ControllerBase
     {
         private readonly IGenericRepository<UserTypes> _repository;
+
         public UserTypesController(IGenericRepository<UserTypes> repository)
         {
             _repository = repository;
         }
 
-
         /// <summary>
-        /// get user types
+        /// Get all user types
         /// </summary>
-        /// <param name="id">id number of user type</param>
-        /// <returns></returns>
+        /// <returns>List of user types</returns>
         [HttpGet]
-        [ProducesResponseType(typeof(UserTypesModel), 200)]
-        public async Task<IActionResult> Get(int id)
+        [ProducesResponseType(typeof(IEnumerable<UserTypesModel>), 200)]
+        public async Task<IActionResult> GetAllUserTypes()
         {
-            var data = await _repository.GetByIdAsync(id);
-            if (data == null)
+            var userTypes = await _repository.GetAllAsync();
+            var userTypeModels = new List<UserTypesModel>();
+
+            foreach (var userType in userTypes)
             {
-                return NotFound();
+                userTypeModels.Add(new UserTypesModel
+                {
+                    TypeName = userType.TypeName,
+                    Description = userType.Description
+                });
             }
-            return Ok(new UserTypesModel { 
-                TypeName = data.TypeName,
-                Description = data.Description
-            });
+
+            return Ok(userTypeModels);
         }
 
         /// <summary>
-        /// add new user type
+        /// Get user type by ID
         /// </summary>
-        /// <param name="userTypes">user type object</param>
-        /// <returns></returns>
+        /// <param name="id">ID of the user type</param>
+        /// <returns>User type with the specified ID</returns>
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(UserTypesModel), 200)]
+        public async Task<IActionResult> GetUserType(int id)
+        {
+            var userType = await _repository.GetByIdAsync(id);
+            if (userType == null)
+            {
+                return NotFound();
+            }
+
+            var userTypeModel = new UserTypesModel
+            {
+                TypeName = userType.TypeName,
+                Description = userType.Description
+            };
+
+            return Ok(userTypeModel);
+        }
+
+        /// <summary>
+        /// Add a new user type
+        /// </summary>
+        /// <param name="userTypes">User type object</param>
+        /// <returns>Created user type</returns>
         [HttpPost]
         public async Task<IActionResult> AddUserType(UserTypesModel userTypes)
         {
-            UserTypes u = new UserTypes
+            var newUserType = new UserTypes
             {
                 TypeName = userTypes.TypeName,
                 Description = userTypes.Description
             };
 
-            await _repository.AddAsync(u);
+            await _repository.AddAsync(newUserType);
             await _repository.SaveAsync();
 
-            return Created($"api/usertypes/{u.Id}", u);
+            return Created($"api/usertypes/{newUserType.Id}", newUserType);
         }
 
         /// <summary>
-        /// delete user type
+        /// Delete a user type by ID
         /// </summary>
+        /// <param name="id">ID of the user type</param>
         /// <returns></returns>
         [HttpDelete]
         public async Task<IActionResult> Delete(int id)
@@ -69,3 +99,4 @@ namespace ShoppingApi.Controllers
         }
     }
 }
+

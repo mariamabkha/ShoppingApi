@@ -1,13 +1,18 @@
 ﻿namespace ShoppingApi.ViewModel
 {
+    /// <summary>
+    /// Represents a category.
+    /// </summary>
     public class CategoriesModel
     {
+
         /// <summary>
-        /// category name
+        /// Gets or sets the name of the category.
         /// </summary>
-        public string Name { get; set; }
+        public string CategoryName { get; set; }
+
         /// <summary>
-        /// category description
+        /// Gets or sets the description of the category.
         /// </summary>
         public string Description { get; set; }
     }

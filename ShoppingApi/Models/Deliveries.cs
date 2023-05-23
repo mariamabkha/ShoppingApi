@@ -6,6 +6,6 @@
         public int UserId { get; set; }
         public DateTime Date { get; set; }
 
-        public UserAccounts? UserAccount { get; set; }
+        public UserAccounts UserAccount { get; set; }
     }
 }

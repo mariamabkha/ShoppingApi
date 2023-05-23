@@ -8,6 +8,8 @@
         public int Amount { get; set; }
         public DateTime Date { get; set; }
         public int UserId { get; set; }
-        public UserAccounts? UserAccount { get; set; }
+
+        public Products Product { get; set; }
+        public UserAccounts UserAccount { get; set; }
     }
 }

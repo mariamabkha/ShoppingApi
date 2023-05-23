@@ -32,6 +32,19 @@ namespace ShoppingApi.Repository
             return await _dbContext.Set<T>().FindAsync(id);
         }
 
+        public async Task<T> GetFirstOrDefaultAsync(Expression<Func<T, bool>> expression = null,
+            Expression<Func<T, object>>[] includes = null)
+        {
+            var data = expression == null ? _dbContext.Set<T>().AsQueryable() : _dbContext.Set<T>().Where(expression);
+
+            if (includes != null)
+            {
+                data = includes.Aggregate(data, (item, include) => item.Include(include));
+            }
+
+            return await data.FirstOrDefaultAsync();
+        }
+
         public async Task AddAsync(T obj)
         {
             await _dbContext.Set<T>().AddAsync(obj);

@@ -6,10 +6,8 @@
         public int UserId { get; set; }
         public int CartId { get; set; }
         public DateTime Date { get; set; }
-        //public bool IsComplete { get; set; }  // Add the IsComplete property
 
-
-        public UserAccounts? UserAccount { get; set; }
-        public Cart? Cart { get; set; }
+        public UserAccounts UserAccount { get; set; }
+        public Cart Cart { get; set; }
     }
 }

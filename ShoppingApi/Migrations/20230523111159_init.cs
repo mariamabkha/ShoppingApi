@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ShoppingApi.Migrations
 {
     /// <inheritdoc />
-    public partial class createShoppingDB : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,32 +17,12 @@ namespace ShoppingApi.Migrations
                 {
                     Id = table.Column<int>(type: "int", maxLength: 11, nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    CategoryName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Categories", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserAcounts",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", maxLength: 11, nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    TypeId = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Age = table.Column<int>(type: "int", nullable: false),
-                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ContactNumber = table.Column<int>(type: "int", nullable: false),
-                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserAcounts", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -60,23 +40,49 @@ namespace ShoppingApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserAccounts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", maxLength: 11, nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TypeId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Age = table.Column<int>(type: "int", nullable: false),
+                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ContactNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserAccounts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserAccounts_UserTypes_TypeId",
+                        column: x => x.TypeId,
+                        principalTable: "UserTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Deliveries",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", maxLength: 11, nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", maxLength: 11, nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UserAccountId = table.Column<int>(type: "int", nullable: true)
+                    Date = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Deliveries", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Deliveries_UserAcounts_UserAccountId",
-                        column: x => x.UserAccountId,
-                        principalTable: "UserAcounts",
-                        principalColumn: "Id");
+                        name: "FK_Deliveries_UserAccounts_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -89,9 +95,8 @@ namespace ShoppingApi.Migrations
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Price = table.Column<int>(type: "int", nullable: false),
                     Count = table.Column<int>(type: "int", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UserId = table.Column<int>(type: "int", nullable: false),
-                    UserAccountId = table.Column<int>(type: "int", nullable: true)
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -103,14 +108,15 @@ namespace ShoppingApi.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Products_UserAcounts_UserAccountId",
-                        column: x => x.UserAccountId,
-                        principalTable: "UserAcounts",
-                        principalColumn: "Id");
+                        name: "FK_Products_UserAccounts_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Transaction",
+                name: "Transactions",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", maxLength: 11, nullable: false)
@@ -118,17 +124,17 @@ namespace ShoppingApi.Migrations
                     TransactionType = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UserId = table.Column<int>(type: "int", nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UserAccountId = table.Column<int>(type: "int", nullable: true)
+                    Date = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Transaction", x => x.Id);
+                    table.PrimaryKey("PK_Transactions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Transaction_UserAcounts_UserAccountId",
-                        column: x => x.UserAccountId,
-                        principalTable: "UserAcounts",
-                        principalColumn: "Id");
+                        name: "FK_Transactions_UserAccounts_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -139,8 +145,7 @@ namespace ShoppingApi.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductId = table.Column<int>(type: "int", maxLength: 11, nullable: false),
                     UserId = table.Column<int>(type: "int", maxLength: 11, nullable: false),
-                    Count = table.Column<int>(type: "int", maxLength: 11, nullable: false),
-                    UserAccountId = table.Column<int>(type: "int", nullable: true)
+                    Count = table.Column<int>(type: "int", maxLength: 11, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -152,14 +157,15 @@ namespace ShoppingApi.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Carts_UserAcounts_UserAccountId",
-                        column: x => x.UserAccountId,
-                        principalTable: "UserAcounts",
-                        principalColumn: "Id");
+                        name: "FK_Carts_UserAccounts_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Payment",
+                name: "Payments",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", maxLength: 11, nullable: false)
@@ -168,50 +174,50 @@ namespace ShoppingApi.Migrations
                     Quantity = table.Column<int>(type: "int", maxLength: 255, nullable: false),
                     Amount = table.Column<int>(type: "int", maxLength: 11, nullable: false),
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UserId = table.Column<int>(type: "int", maxLength: 11, nullable: false),
-                    UserAccountId = table.Column<int>(type: "int", nullable: true)
+                    UserId = table.Column<int>(type: "int", maxLength: 11, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Payment", x => x.Id);
+                    table.PrimaryKey("PK_Payments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Payment_Products_ProductId",
+                        name: "FK_Payments_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Payment_UserAcounts_UserAccountId",
-                        column: x => x.UserAccountId,
-                        principalTable: "UserAcounts",
-                        principalColumn: "Id");
+                        name: "FK_Payments_UserAccounts_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Order",
+                name: "Orders",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", maxLength: 11, nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", maxLength: 11, nullable: false),
                     CartId = table.Column<int>(type: "int", maxLength: 11, nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UserAccountId = table.Column<int>(type: "int", nullable: true)
+                    Date = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Order", x => x.Id);
+                    table.PrimaryKey("PK_Orders", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Order_Carts_CartId",
+                        name: "FK_Orders_Carts_CartId",
                         column: x => x.CartId,
                         principalTable: "Carts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Order_UserAcounts_UserAccountId",
-                        column: x => x.UserAccountId,
-                        principalTable: "UserAcounts",
-                        principalColumn: "Id");
+                        name: "FK_Orders_UserAccounts_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -220,35 +226,35 @@ namespace ShoppingApi.Migrations
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Carts_UserAccountId",
+                name: "IX_Carts_UserId",
                 table: "Carts",
-                column: "UserAccountId");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Deliveries_UserAccountId",
+                name: "IX_Deliveries_UserId",
                 table: "Deliveries",
-                column: "UserAccountId");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Order_CartId",
-                table: "Order",
+                name: "IX_Orders_CartId",
+                table: "Orders",
                 column: "CartId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Order_UserAccountId",
-                table: "Order",
-                column: "UserAccountId");
+                name: "IX_Orders_UserId",
+                table: "Orders",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Payment_ProductId",
-                table: "Payment",
+                name: "IX_Payments_ProductId",
+                table: "Payments",
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Payment_UserAccountId",
-                table: "Payment",
-                column: "UserAccountId");
+                name: "IX_Payments_UserId",
+                table: "Payments",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Products_CategoryId",
@@ -256,14 +262,19 @@ namespace ShoppingApi.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Products_UserAccountId",
+                name: "IX_Products_UserId",
                 table: "Products",
-                column: "UserAccountId");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Transaction_UserAccountId",
-                table: "Transaction",
-                column: "UserAccountId");
+                name: "IX_Transactions_UserId",
+                table: "Transactions",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserAccounts_TypeId",
+                table: "UserAccounts",
+                column: "TypeId");
         }
 
         /// <inheritdoc />
@@ -273,16 +284,13 @@ namespace ShoppingApi.Migrations
                 name: "Deliveries");
 
             migrationBuilder.DropTable(
-                name: "Order");
+                name: "Orders");
 
             migrationBuilder.DropTable(
-                name: "Payment");
+                name: "Payments");
 
             migrationBuilder.DropTable(
-                name: "Transaction");
-
-            migrationBuilder.DropTable(
-                name: "UserTypes");
+                name: "Transactions");
 
             migrationBuilder.DropTable(
                 name: "Carts");
@@ -294,7 +302,10 @@ namespace ShoppingApi.Migrations
                 name: "Categories");
 
             migrationBuilder.DropTable(
-                name: "UserAcounts");
+                name: "UserAccounts");
+
+            migrationBuilder.DropTable(
+                name: "UserTypes");
         }
     }
 }

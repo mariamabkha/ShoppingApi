@@ -2,130 +2,161 @@
 using ShoppingApi.Models;
 using ShoppingApi.Repository;
 using ShoppingApi.ViewModel;
+using System.Threading.Tasks;
 
 namespace ShoppingApi.Controllers
 {
     [ApiController]
-    [Route("api/cart")]
+    [Route("api/carts")]
     public class CartController : ControllerBase
     {
-        private readonly IGenericRepository<Cart> _repository;
-        private readonly IGenericRepository<Order> _orderRepository;
+        private readonly IGenericRepository<Cart> _cartRepository;
+        private readonly IGenericRepository<UserAccounts> _userRepository;
         private readonly IGenericRepository<Products> _productRepository;
 
-        public CartController(IGenericRepository<Cart> repository, IGenericRepository<Order> orderRepository)
+
+
+        public CartController(IGenericRepository<Cart> cartRepository, IGenericRepository<UserAccounts> userRepository, IGenericRepository<Products> productRepository)
         {
-            _repository = repository;
-            _orderRepository = orderRepository;
+            _cartRepository = cartRepository;
+            _userRepository = userRepository;
+            _productRepository = productRepository;
         }
 
         /// <summary>
         /// Add a product to the cart.
         /// </summary>
-        /// <param name="userId">ID of the user.</param>
-        /// <param name="productId"> ID of the product to add.</param>
-        /// <returns>updated cart.</returns>
-        [HttpPost("{userId}/add/{productId}")]
-        [ProducesResponseType(typeof(CartModel), 200)]
-        public async Task<IActionResult> AddToCart(int userId, int productId)
+        /// <param name="cart">CartModel containing product and user details</param>
+        /// <returns>Created cart with product details</returns>
+        [HttpPost]
+        [ProducesResponseType(typeof(CartModel), 201)]
+        public async Task<IActionResult> AddToCart(CartModel cart)
         {
-            var cart = await _repository.GetByIdAsync(userId);
-
-            if (cart == null)
+            if (cart.IsFilled)
             {
-                // Create a new cart if it doesn't exist
-                cart = new Cart
-                {
-                    UserId = userId,
-                    IsFilled = false,
-                    Count = 5, // Set the maximum cart count to 5
-                    Product = new List<Products>()  // Initialize the Products collection
-                };
-                await _repository.AddAsync(cart);
-            }
-            else if (cart.Product.Count >= cart.Count)
-            {
-                return BadRequest("Cart is already full. Cannot add more items.");
+                return BadRequest("Cart is already filled.");
             }
 
-            // Retrieve the product from the database based on the productId
-            var product = await _productRepository.GetByIdAsync(productId);
+            var user = await _userRepository.GetByIdAsync(cart.UserId);
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+            // Check if the product exists
+            var product = await _productRepository.GetByIdAsync(cart.ProductId);
             if (product == null)
             {
-                return BadRequest("Invalid product ID.");
+                return BadRequest("Product not found.");
             }
 
-            cart.Product.Add(product);
+            var newCart = new Cart
+            {
+                ProductId = cart.ProductId,
+                UserId = cart.UserId,
+                Count = cart.Count,
+                IsFilled = cart.IsFilled
+            };
 
-            cart.IsFilled = cart.Product.Count >= cart.Count;
-
-            await _repository.SaveAsync();
+            await _cartRepository.AddAsync(newCart);
+            await _cartRepository.SaveAsync();
 
             var cartModel = new CartModel
             {
-                ProductId = productId,
-                UserId = userId,
-                Count = cart.Product.Count
+                ProductId = newCart.ProductId,
+                UserId = newCart.UserId,
+                Count = newCart.Count,
+                IsFilled = newCart.IsFilled
+            };
+
+            return Created($"api/cart/{newCart.Id}", cartModel);
+        }
+
+
+        /// <summary>
+        /// Get cart by ID.
+        /// </summary>
+        /// <param name="id">Cart ID</param>
+        /// <returns>Cart details</returns>
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(CartModel), 200)]
+        public async Task<IActionResult> GetCart(int id)
+        {
+            var cart = await _cartRepository.GetByIdAsync(id);
+            if (cart == null)
+            {
+                return NotFound();
+            }
+
+            var cartModel = new CartModel
+            {
+                ProductId = cart.ProductId,
+                UserId = cart.UserId,
+                Count = cart.Count,
+                IsFilled = cart.IsFilled
             };
 
             return Ok(cartModel);
         }
 
+        /// <summary>
+        /// Delete cart by ID.
+        /// </summary>
+        /// <param name="id">Cart ID</param>
+        /// <returns>NoContent</returns>
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteCart(int id)
+        {
+            _cartRepository.Delete(id);
+            await _cartRepository.SaveAsync();
+            return NoContent();
+        }
 
         /// <summary>
-        /// Get the cart details for a specific user.
+        /// Update cart by ID.
         /// </summary>
-        /// <param name="id">ID of the user.</param>
-        /// <returns>The cart details.</returns>
-        [HttpGet]
+        /// <param name="id">Cart ID</param>
+        /// <param name="cart">Updated cart details</param>
+        /// <returns>Updated cart</returns>
+        [HttpPut("{id:int}")]
         [ProducesResponseType(typeof(CartModel), 200)]
-        public async Task<IActionResult> Get(int id)
+        public async Task<IActionResult> UpdateCart(int id, CartModel cart)
         {
-            var data = await _repository.GetByIdAsync(id);
-            if (data == null)
+            var existingCart = await _cartRepository.GetByIdAsync(id);
+            if (existingCart == null)
             {
                 return NotFound();
             }
-            return Ok(new CartModel { 
-                ProductId = data.ProductId,
-                UserId = data.UserId
-            });
-        }
 
+            var user = await _userRepository.GetByIdAsync(cart.UserId);
+            var product = await _productRepository.GetByIdAsync(cart.ProductId);
 
-        /// <summary>
-        /// Add a new cart.
-        /// </summary>
-        /// <param name="cart">cart data to add.</param>
-        /// <returns>The created cart.</returns>
-        [HttpPost]
-        public async Task<IActionResult> AddCart(CartModel cart)
-        {
-            Cart c = new Cart
+            if (user == null || product == null)
             {
-                ProductId = cart.ProductId,
-                UserId = cart.UserId
+                return BadRequest("User or Product not found");
+            }
+
+            existingCart.UserId = cart.UserId;
+            existingCart.ProductId = cart.ProductId;
+            existingCart.Count = cart.Count;
+            existingCart.IsFilled = cart.IsFilled;
+
+            _cartRepository.Update(existingCart);
+            await _cartRepository.SaveAsync();
+
+            var updatedCartModel = new CartModel
+            {
+                ProductId = existingCart.ProductId,
+                UserId = existingCart.UserId,
+                Count = existingCart.Count,
+                IsFilled = existingCart.IsFilled
             };
 
-            await _repository.AddAsync(c);
-            await _repository.SaveAsync();
-
-            return Created($"api/cart/{c.Id}", c);
+            return Ok(updatedCartModel);
         }
-
-        /// <summary>
-        /// Delete a cart by its ID and associated product ID.
-        /// </summary>
-        /// <param name="id">ID of the cart.</param>
-        /// <param name="productId">ID of the associated product.</param>
-        /// <returns>An action result indicating the success of the operation.</returns>
-        [HttpDelete]
-        public async Task<IActionResult> Delete(int id, int productId)
-        {
-            _repository.Delete(id); _repository.Delete(productId);
-            await _repository.SaveAsync();
-            return Ok();
-        }
-
     }
+
 }
+
+
+

@@ -1,9 +1,18 @@
 ﻿namespace ShoppingApi.ViewModel
 {
+    /// <summary>
+    /// Represents a delivery.
+    /// </summary>
     public class DeliveriesModel
     {
-        public int Id { get; set; }
+        /// <summary>
+        /// Gets or sets the user ID associated with the delivery.
+        /// </summary>
         public int UserId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the date of the delivery.
+        /// </summary>
         public DateTime Date { get; set; }
     }
 }

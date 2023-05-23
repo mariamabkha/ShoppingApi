@@ -8,13 +8,16 @@
         public int Age { get; set; }
         public string Gender { get; set; }
         public string Address { get; set; }
-        public int ContactNumber { get; set; }
+        public string ContactNumber { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
-        public UserTypes UserTypes { get; set; }
-        public IList<Products> Products { get; set; }
-        public IList<Payment> Payments { get; set; }
-        public IList<Order> Orders { get; set; }
-        public IList<Deliveries> Deliveries { get; set; }
+
+        public UserTypes UserType { get; set; }
+        public ICollection<Products> Products { get; set; }
+        public ICollection<Payment> Payments { get; set; }
+        public ICollection<Cart> Carts { get; set; }
+        public ICollection<Order> Orders { get; set; }
+        public ICollection<Deliveries> Deliveries { get; set; }
+        public ICollection<Transaction> Transactions { get; set; }
     }
 }
